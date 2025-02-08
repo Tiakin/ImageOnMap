@@ -128,7 +128,14 @@ public abstract class SplatterMapManager {
      * @return The modified item stack. The instance may be different if the passed item stack is not a craft itemstack.
      */
     public static ItemStack addSplatterAttribute(final ItemStack itemStack) {
-        GlowEffect.addGlow(itemStack);
+        try {
+            MapMeta im = (MapMeta)itemStack.getItemMeta();
+            im.setEnchantmentGlintOverride(true);
+            itemStack.setItemMeta(im);
+        } catch (Exception e) {
+            PluginLogger.error("Unable to add Splatter Map attribute on item", e);
+            GlowEffect.addGlow(itemStack);
+        }
         return itemStack;
     }
 
@@ -140,20 +147,28 @@ public abstract class SplatterMapManager {
      * @return True if the attribute was detected.
      */
     public static boolean hasSplatterAttributes(ItemStack itemStack) {
-
         try {
-            final NBTCompound nbt = NBT.fromItemStack(itemStack);
-            if (!nbt.containsKey("Enchantments")) {
+            if (itemStack == null || itemStack.getItemMeta() == null 
+                    || !itemStack.getItemMeta().hasEnchantmentGlintOverride()) {
                 return false;
             }
-            final Object enchantments = nbt.get("Enchantments");
-            if (!(enchantments instanceof NBTList)) {
+            return itemStack.getItemMeta().getEnchantmentGlintOverride();
+        } catch (Exception e) {
+            PluginLogger.error("failed to get Splatter Map attribute on item", e);
+            try {
+                final NBTCompound nbt = NBT.fromItemStack(itemStack);
+                if (!nbt.containsKey("Enchantments")) {
+                    return false;
+                }
+                final Object enchantments = nbt.get("Enchantments");
+                if (!(enchantments instanceof NBTList)) {
+                    return false;
+                }
+                return !((NBTList) enchantments).isEmpty();
+            } catch (NMSException exception) {
+                PluginLogger.error("Unable to get Splatter Map attribute on item", exception);
                 return false;
             }
-            return !((NBTList) enchantments).isEmpty();
-        } catch (NMSException e) {
-            PluginLogger.error("Unable to get Splatter Map attribute on item", e);
-            return false;
         }
     }
 
@@ -245,8 +260,12 @@ public abstract class SplatterMapManager {
                 // when on ceiling we flipped the rotation
                 RunTask.later(() -> {
                     addPropertiesToFrames(player, frame);
-                    frame.setItem(
-                            new ItemStackBuilder(Material.FILLED_MAP).nbt(ImmutableMap.of("map", id)).craftItem());
+                    ItemStack item = new ItemStack(Material.FILLED_MAP);
+                    MapMeta meta = (MapMeta) item.getItemMeta();
+                    meta.setMapId(id);
+                    item.setItemMeta(meta);
+                    frame.setItem(item);
+
                 }, 5L);
 
                 if (i == 0) {
@@ -286,7 +305,7 @@ public abstract class SplatterMapManager {
                 i++;
             }
         } else {
-            // If it is on a wall NSEW
+            // If it is on a wall NSEW    
             FlatLocation startLocation = new FlatLocation(startFrame.getLocation(), startFrame.getFacing());
             FlatLocation endLocation = startLocation.clone().add(poster.getColumnCount(), poster.getRowCount());
 
@@ -307,8 +326,11 @@ public abstract class SplatterMapManager {
 
                 RunTask.later(() -> {
                     addPropertiesToFrames(player, frame);
-                    frame.setItem(
-                            new ItemStackBuilder(Material.FILLED_MAP).nbt(ImmutableMap.of("map", id)).craftItem());
+                    ItemStack item = new ItemStack(Material.FILLED_MAP);
+                    MapMeta meta = (MapMeta) item.getItemMeta();
+                    meta.setMapId(id);
+                    item.setItemMeta(meta);
+                    frame.setItem(item);
                 }, 5L);
 
 
